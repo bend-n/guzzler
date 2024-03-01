@@ -1,0 +1,18 @@
+[package]
+name = "data-guzzler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serenity = { version = "0.12", features = [
+  "builder",
+  "client",
+  "utils",
+  "rustls_backend",
+  "gateway",
+  "cache",
+], default-features = false }
+poise = { git = "https://github.com/serenity-rs/poise" }
+anyhow = "1.0.80"
+tokio = { version = "1.36.0", features = ["rt-multi-thread"] }
+emoji = { git = "https://github.com/apricot-conservation-project/emoji", version = "0.1.0" }
