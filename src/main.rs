@@ -103,10 +103,13 @@ pub async fn users(
         data[d] += 1;
     }
     let min = min.max(*p.from());
-    let mut f = std::fs::File::create("1.dat").unwrap();
-    let mut sum = 0;
+    let i = c.id();
+
+    let mut f = std::fs::File::create(format!("{i}.dat")).unwrap();
+    let mut sum = data[..min].iter().map(|&x| x as u64).sum::<u64>();
+    let floor = sum;
     for (i, &d) in data[min..max].iter().enumerate() {
-        sum += d;
+        sum += d as u64;
         writeln!(
             &mut f,
             r"{},{sum}",
@@ -118,16 +121,37 @@ pub async fn users(
         )
         .unwrap();
     }
+    let plot = if cfg!(debug_assertions) {
+        std::fs::read_to_string("x.plot").unwrap()
+    } else {
+        include_str!("../x.plot").to_string()
+    };
+
+    let plot = plot
+        .replace(
+            "{floor}",
+            &match p {
+                Period::AllTime => "".to_string(),
+                _ => floor.to_string(),
+            },
+        )
+        .replace("{id}", &i.to_string());
+    let path = format!("{i}.plot");
+    std::fs::File::create_new(&path)
+        .unwrap()
+        .write_all(plot.as_bytes())
+        .unwrap();
+
     assert!(std::process::Command::new("gnuplot")
-        .arg("x.plot")
+        .arg(&path)
         .spawn()
         .unwrap()
         .wait()
         .unwrap()
         .success());
     assert!(std::process::Command::new("inkscape")
-        .arg("--export-filename=data.png")
-        .arg("data.svg")
+        .arg(format!("--export-filename={i}.png"))
+        .arg(format!("{i}.svg"))
         .spawn()
         .unwrap()
         .wait()
@@ -135,9 +159,18 @@ pub async fn users(
         .success());
     poise::send_reply(
         c,
-        poise::CreateReply::default().attachment(CreateAttachment::path("data.png").await.unwrap()),
+        poise::CreateReply::default()
+            .attachment(CreateAttachment::path(format!("{i}.png")).await.unwrap()),
     )
     .await?;
+    tokio::task::spawn_blocking(move || {
+        std::fs::remove_file(format!("{i}.dat")).unwrap();
+        std::fs::remove_file(path).unwrap();
+        std::fs::remove_file(format!("{i}.svg")).unwrap();
+        std::fs::remove_file(format!("{i}.png")).unwrap();
+    })
+    .await
+    .unwrap();
     Ok(())
 }
 

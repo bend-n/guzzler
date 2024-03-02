@@ -16,7 +16,7 @@ set key textcolor rgb '#E6EDF3' font "Verdana,14"
 set xtics nomirror
 set border lw 1
 
-set output "data.svg"
+set output "{id}.svg"
 set title "users"
 # set logscale y
 set ytics 50
@@ -26,7 +26,7 @@ set style histogram cluster gap 1
 set ylabel "change in user count in period"
 set xlabel "days"
 set auto x
-set yrange [0:*]
+set yrange [{floor}:*]
 set style line 12 lc rgb '#1F2430' lt 1 lw 2 dt 22
 unset xtics
 set xtics format ""
@@ -36,4 +36,4 @@ set grid ytics ls 12
 set datafile separator ","
 set key top left
 
-plot '1.dat' u 2:xtic(1) smooth acsplines title "user count"
+plot '{id}.dat' u 2:xtic(1) smooth acsplines title "user count"
