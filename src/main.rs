@@ -1,13 +1,89 @@
 use anyhow::Result;
+use chrono::{DateTime, Datelike, TimeZone, Utc};
 use emoji::named::*;
 use poise::serenity_prelude::*;
 use serenity::futures::StreamExt;
 use std::fs::read_to_string;
 use std::io::Write;
+use std::ops::{Deref, Sub};
 type Context<'a> = poise::Context<'a, (), anyhow::Error>;
+
+#[derive(poise::ChoiceParameter, Default, Copy, Clone, Debug)]
+enum Period {
+    #[name = "all time"]
+    #[default]
+    AllTime,
+    #[name = "year"]
+    LastYear,
+    #[name = "month"]
+    LastMonth,
+    #[name = "week"]
+    LastWeek,
+}
+
+struct Days(usize);
+
+impl Deref for Days {
+    type Target = usize;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Sub<usize> for Days {
+    type Output = Days;
+
+    fn sub(self, rhs: usize) -> Self::Output {
+        Self(self.0 - rhs)
+    }
+}
+
+impl Days {
+    fn t(self) -> DateTime<Utc> {
+        Utc.timestamp_millis_opt(((*self as i64 * (60 * 60 * 24) as i64) + 1420070400) * 1000)
+            .single()
+            .unwrap()
+    }
+
+    fn now() -> Self {
+        Self::from(Utc::now().timestamp() as usize)
+    }
+}
+
+impl From<usize> for Days {
+    fn from(value: usize) -> Self {
+        Self((value - 1420070400) / (60 * 60 * 24))
+    }
+}
+
+impl Period {
+    fn from(self) -> Days {
+        match self {
+            Self::AllTime => Days(0),
+            Self::LastYear => Days::now() - 365,
+            Self::LastMonth => Days::now() - 30,
+            Self::LastWeek => Days::now() - 7,
+        }
+    }
+
+    fn tic(self, t: Days) -> bool {
+        match self {
+            Self::LastYear | Self::AllTime => t.t().day() == 1,
+            Self::LastMonth => t.t().day() % 7 == 0,
+            Self::LastWeek => true,
+        }
+    }
+}
+
 #[poise::command(slash_command)]
-pub async fn users(c: Context<'_>) -> Result<()> {
+/// graph of users over time
+pub async fn users(
+    c: Context<'_>,
+    #[description = "time period to graph (defaults to all time)"] period: Option<Period>,
+) -> Result<()> {
     c.defer().await?;
+    let p = period.unwrap_or_default();
     let g = {
         let Some(g) = c.guild() else {
             _ = c.reply(format!("{CANCEL} need guild"));
@@ -21,23 +97,21 @@ pub async fn users(c: Context<'_>) -> Result<()> {
     let mut max = 0;
     while let Some(x) = s.next().await {
         let x = x?.joined_at.unwrap();
-        let d = (x.timestamp() as usize - 1420070400) / (60 * 60 * 24);
+        let d = *Days::from(x.timestamp() as usize);
         min = min.min(d);
         max = max.max(d);
         data[d] += 1;
     }
+    let min = min.max(*p.from());
     let mut f = std::fs::File::create("1.dat").unwrap();
     let mut sum = 0;
     for (i, &d) in data[min..max].iter().enumerate() {
         sum += d;
-        let t =
-            Timestamp::from_unix_timestamp(((i + min) as i64 * (60 * 60 * 24) as i64) + 1420070400)
-                .unwrap();
         writeln!(
             &mut f,
             r"{},{sum}",
-            if t.format("%d").to_string() == "01" {
-                t.format("%m/%d/%y").to_string()
+            if p.tic(Days(i + min)) {
+                Days(i + min).t().format("%m/%d/%y").to_string()
             } else {
                 "".to_string()
             }

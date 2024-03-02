@@ -23,7 +23,7 @@ set ytics 50
 set mytics 2
 set style data histogram
 set style histogram cluster gap 1
-set ylabel "user count"
+set ylabel "change in user count in period"
 set xlabel "days"
 set auto x
 set yrange [0:*]

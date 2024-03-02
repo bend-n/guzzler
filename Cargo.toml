@@ -16,3 +16,4 @@ poise = { git = "https://github.com/serenity-rs/poise" }
 anyhow = "1.0.80"
 tokio = { version = "1.36.0", features = ["rt-multi-thread"] }
 emoji = { git = "https://github.com/apricot-conservation-project/emoji", version = "0.1.0" }
+chrono = "0.4.34"
