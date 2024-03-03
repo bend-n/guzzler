@@ -1,4 +1,4 @@
-set terminal svg enhanced background rgb "#0D1117" size 1280 720
+set terminal svg enhanced background rgb "#0D1117" size 720 720
 
 set linetype 1 lw 2 lc rgb '#73D0FF' pointtype 6
 set linetype 2 lw 2 lc rgb '#FFD173' pointtype 6
@@ -17,16 +17,16 @@ set xtics nomirror
 set border lw 1
 
 set output "{id}.svg"
-set title "users"
+set title "messages"
 # set logscale y
 set ytics 50
 set mytics 2
 set style data histogram
 set style histogram cluster gap 1
-set ylabel "user count"
+set ylabel "message volume"
 set xlabel "days"
 set auto x
-set yrange [{floor}:*]
+set yrange [0:*]
 set style line 12 lc rgb '#1F2430' lt 1 lw 2 dt 22
 unset xtics
 set xtics format ""
@@ -36,4 +36,4 @@ set grid ytics ls 12
 set datafile separator ","
 set key top left
 
-plot '{id}.dat' u 2:xtic(1) smooth acsplines title "user count"
+plot '{id}.dat' u 2:xtic(1) smooth acsplines title "message volume"
